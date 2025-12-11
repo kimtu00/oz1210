@@ -264,3 +264,4 @@ WITH CHECK (
 - **환경 변수**: `.env.local`을 `.gitignore`에 추가하세요
 - **토큰 검증**: Supabase가 자동으로 Clerk 토큰을 검증합니다
 
+

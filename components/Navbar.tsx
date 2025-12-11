@@ -9,21 +9,59 @@
 
 import { SignedOut, SignInButton, SignedIn, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loading } from "@/components/ui/loading";
+import { performanceMetricsStore } from "@/lib/utils/performance-metrics";
 
 const Navbar = () => {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
+  const currentKeyword = searchParams.get("keyword") || "";
+  const [searchQuery, setSearchQuery] = useState(currentKeyword);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // URL의 keyword가 변경되면 검색창 업데이트
+  useEffect(() => {
+    setSearchQuery(currentKeyword);
+  }, [currentKeyword]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/?keyword=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    if (isSearching) return;
+
+    setIsSearching(true);
+    const trimmedQuery = searchQuery.trim();
+    performanceMetricsStore.measureSearch(trimmedQuery || "clear", () => {
+      if (trimmedQuery) {
+        // 기존 필터 파라미터 유지하면서 keyword 추가, 페이지는 1로 리셋
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("keyword", trimmedQuery);
+        params.delete("page"); // 검색 시 페이지 1로 리셋
+        router.push(`/?${params.toString()}`);
+      } else {
+        // 검색어가 없으면 keyword 제거, 페이지도 제거
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("keyword");
+        params.delete("page");
+        const queryString = params.toString();
+        router.push(queryString ? `/?${queryString}` : "/");
+      }
+      // 로딩 상태는 Suspense가 처리하므로 짧은 지연 후 리셋
+      setTimeout(() => setIsSearching(false), 100);
+    });
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("keyword");
+    params.delete("page"); // 검색어 제거 시 페이지도 제거
+    const queryString = params.toString();
+    router.push(queryString ? `/?${queryString}` : "/");
   };
 
   return (
@@ -40,14 +78,31 @@ const Navbar = () => {
           className="hidden md:flex flex-1 max-w-md mx-4"
         >
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            {isSearching ? (
+              <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                <Loading size="sm" />
+              </div>
+            ) : (
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            )}
             <Input
               type="search"
               placeholder="관광지 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full"
+              className="pl-10 pr-10 w-full"
+              disabled={isSearching}
             />
+            {searchQuery && !isSearching && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="검색어 지우기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </form>
 
@@ -94,14 +149,31 @@ const Navbar = () => {
       <div className="md:hidden border-t px-4 py-2">
         <form onSubmit={handleSearch}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            {isSearching ? (
+              <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                <Loading size="sm" />
+              </div>
+            ) : (
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            )}
             <Input
               type="search"
               placeholder="관광지 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full"
+              className="pl-10 pr-10 w-full"
+              disabled={isSearching}
             />
+            {searchQuery && !isSearching && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="검색어 지우기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </form>
       </div>

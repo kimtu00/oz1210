@@ -40,3 +40,4 @@ USING (true);
 GRANT SELECT ON TABLE public.instruments TO anon;
 GRANT SELECT ON TABLE public.instruments TO authenticated;
 
+

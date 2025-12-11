@@ -55,16 +55,22 @@ export function Error({
 }: ErrorProps) {
   return (
     <div
+      role="alert"
+      aria-live="polite"
+      aria-atomic="true"
       className={cn(
         "flex flex-col items-center justify-center gap-4 p-6 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900",
         compact && "p-4 gap-2",
         className
       )}
     >
-      <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+      <AlertCircle 
+        className="h-6 w-6 text-red-600 dark:text-red-400" 
+        aria-hidden="true"
+      />
       <p
         className={cn(
-          "text-sm text-red-600 dark:text-red-400 text-center",
+          "text-sm text-red-600 dark:text-red-400 text-center max-w-md",
           compact && "text-xs"
         )}
       >
@@ -76,8 +82,9 @@ export function Error({
           size={compact ? "sm" : "default"}
           onClick={onRetry}
           className="mt-2"
+          aria-label={`${retryText} 버튼`}
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
           {retryText}
         </Button>
       )}

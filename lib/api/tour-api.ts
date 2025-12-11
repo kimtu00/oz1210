@@ -9,6 +9,13 @@
  */
 
 import { getTourApiKey } from "@/lib/utils/env";
+import { measureAPICall } from "@/lib/utils/api-metrics";
+import {
+  validateTourItemsQuality,
+  validateTourDetailQuality,
+  logDataQualityIssues,
+  calculateDataQualityStats,
+} from "@/lib/utils/data-quality";
 import type {
   AreaCode,
   PetTourInfo,
@@ -22,6 +29,18 @@ const BASE_URL = "https://apis.data.go.kr/B551011/KorService2";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1초
 const TIMEOUT = 10000; // 10초
+
+/**
+ * 한국관광공사 API Rate Limit 정보
+ *
+ * 공공 API는 일반적으로 다음과 같은 제한이 있습니다:
+ * - 일일 조회 한도: API 키별로 다름 (일반적으로 1,000 ~ 10,000건/일)
+ * - 동시 요청 제한: 없음 (단, 과도한 요청 시 일시적으로 차단될 수 있음)
+ * - 응답 시간: 평균 1-3초 (네트워크 상태에 따라 다름)
+ *
+ * 참고: 정확한 Rate Limit은 API 키 발급 시 제공되는 문서를 확인하세요.
+ * 에러 코드 "04"는 일일 조회 한도 초과를 의미합니다.
+ */
 
 /**
  * API 응답 헤더 구조
@@ -93,48 +112,91 @@ async function fetchTourAPI<T>(
   params: Record<string, string | number | undefined> = {},
   retries: number = MAX_RETRIES
 ): Promise<T> {
-  const serviceKey = getTourApiKey();
+  // 성능 측정 래퍼
+  return measureAPICall(endpoint, async () => {
+    const serviceKey = getTourApiKey();
 
-  // 공통 파라미터
-  const queryParams = new URLSearchParams({
-    serviceKey,
-    MobileOS: "ETC",
-    MobileApp: "MyTrip",
-    _type: "json",
-  });
+    // 공통 파라미터
+    const queryParams = new URLSearchParams({
+      serviceKey,
+      MobileOS: "ETC",
+      MobileApp: "MyTrip",
+      _type: "json",
+    });
 
-  // 추가 파라미터 추가 (undefined 제외)
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      queryParams.append(key, String(value));
-    }
-  });
+    // 추가 파라미터 추가 (undefined 제외)
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        queryParams.append(key, String(value));
+      }
+    });
 
-  const url = `${BASE_URL}${endpoint}?${queryParams.toString()}`;
+    const url = `${BASE_URL}${endpoint}?${queryParams.toString()}`;
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await fetchWithTimeout(url);
 
       if (!response.ok) {
-        throw new Error(
-          `API request failed: ${response.status} ${response.statusText}`
-        );
+        // HTTP 상태 코드별 에러 메시지
+        let errorMessage = "API 요청에 실패했습니다.";
+        if (response.status === 400) {
+          errorMessage = "잘못된 요청입니다. 파라미터를 확인해주세요.";
+        } else if (response.status === 401) {
+          errorMessage = "인증에 실패했습니다. API 키를 확인해주세요.";
+        } else if (response.status === 403) {
+          errorMessage = "접근이 거부되었습니다.";
+        } else if (response.status === 404) {
+          errorMessage = "요청한 리소스를 찾을 수 없습니다.";
+        } else if (response.status >= 500) {
+          errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        } else if (response.status === 0 || error instanceof TypeError) {
+          errorMessage = "네트워크 연결에 실패했습니다. 인터넷 연결을 확인해주세요.";
+        }
+        throw new Error(errorMessage);
       }
 
       const data: APIResponse<T> = await response.json();
 
       // API 응답 에러 코드 확인
       if (data.response.header.resultCode !== "0000") {
-        throw new Error(
-          `API error: ${data.response.header.resultCode} - ${data.response.header.resultMsg}`
-        );
+        // API 에러 코드별 메시지
+        let errorMessage = data.response.header.resultMsg || "API 오류가 발생했습니다.";
+        const resultCode = data.response.header.resultCode;
+        
+        // 일반적인 에러 코드 처리
+        if (resultCode === "01") {
+          errorMessage = "필수 파라미터가 누락되었습니다.";
+        } else if (resultCode === "02") {
+          errorMessage = "잘못된 파라미터 값입니다.";
+        } else if (resultCode === "03") {
+          errorMessage = "서비스 접근 거부되었습니다.";
+        } else if (resultCode === "04") {
+          errorMessage = "일일 조회 한도를 초과했습니다.";
+        } else if (resultCode === "05") {
+          errorMessage = "서비스 점검 중입니다.";
+        }
+        
+        throw new Error(errorMessage);
       }
 
       return data as unknown as T;
     } catch (error) {
+      // 타임아웃 에러 처리
+      if (error instanceof Error && error.name === "AbortError") {
+        const timeoutError = new Error("요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.");
+        timeoutError.name = "TimeoutError";
+        if (attempt === retries) {
+          throw timeoutError;
+        }
+      }
+      
+      // 네트워크 에러는 재시도, 그 외는 마지막 시도에서만 throw
+      const isNetworkError = error instanceof TypeError || 
+                            (error instanceof Error && error.message.includes("네트워크"));
+      
       // 마지막 시도이거나 재시도 불가능한 에러인 경우
-      if (attempt === retries || error instanceof TypeError) {
+      if (attempt === retries || (!isNetworkError && error instanceof Error && !error.message.includes("네트워크"))) {
         if (process.env.NODE_ENV === "development") {
           console.error(`[Tour API] Failed after ${attempt + 1} attempts:`, {
             endpoint,
@@ -149,9 +211,10 @@ async function fetchTourAPI<T>(
       const delayMs = RETRY_DELAY * Math.pow(2, attempt);
       await delay(delayMs);
     }
-  }
+    }
 
-  throw new Error("Unexpected error in fetchTourAPI");
+    throw new Error("Unexpected error in fetchTourAPI");
+  });
 }
 
 /**
@@ -217,6 +280,16 @@ export async function getAreaBasedList(params: {
   const totalCount =
     data.response.body.totalCount ?? 0;
 
+  // 데이터 품질 검증 (개발 환경)
+  if (process.env.NODE_ENV === "development" && items.length > 0) {
+    const issues = validateTourItemsQuality(items);
+    if (issues.length > 0) {
+      logDataQualityIssues(issues);
+      const stats = calculateDataQualityStats(items);
+      console.log(`[Data Quality] Quality score: ${stats.qualityScore}/100`);
+    }
+  }
+
   return { items, totalCount };
 }
 
@@ -259,6 +332,16 @@ export async function searchKeyword(params: {
   const items = extractItems(data);
   const totalCount = data.response.body.totalCount ?? 0;
 
+  // 데이터 품질 검증 (개발 환경)
+  if (process.env.NODE_ENV === "development" && items.length > 0) {
+    const issues = validateTourItemsQuality(items);
+    if (issues.length > 0) {
+      logDataQualityIssues(issues);
+      const stats = calculateDataQualityStats(items);
+      console.log(`[Data Quality] Quality score: ${stats.qualityScore}/100`);
+    }
+  }
+
   return { items, totalCount };
 }
 
@@ -284,7 +367,17 @@ export async function getDetailCommon(
     throw new Error(`Tour detail not found for contentId: ${contentId}`);
   }
 
-  return items[0];
+  const detail = items[0];
+
+  // 데이터 품질 검증 (개발 환경)
+  if (process.env.NODE_ENV === "development") {
+    const issues = validateTourDetailQuality(detail);
+    if (issues.length > 0) {
+      logDataQualityIssues(issues);
+    }
+  }
+
+  return detail;
 }
 
 /**

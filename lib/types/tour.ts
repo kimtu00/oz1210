@@ -176,3 +176,4 @@ export function getContentTypeName(contentTypeId: string): string {
   return CONTENT_TYPE_MAP[contentTypeId] || "기타";
 }
 
+
