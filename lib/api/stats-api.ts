@@ -27,6 +27,22 @@ import type { RegionStats, TypeStats, StatsSummary } from "@/lib/types/stats";
 const CONTENT_TYPE_IDS = ["12", "14", "15", "25", "28", "32", "38", "39"] as const;
 
 /**
+ * 병렬 요청 수 제한 (동시에 처리할 최대 요청 수)
+ */
+const MAX_CONCURRENT_REQUESTS = 5;
+
+/**
+ * 배열을 배치로 나누는 헬퍼 함수
+ */
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+/**
  * 지역별 관광지 통계 수집 (내부 함수)
  *
  * @returns 지역별 관광지 통계 배열
@@ -45,13 +61,15 @@ async function fetchRegionStatsInternal(): Promise<RegionStats[]> {
       return [];
     }
 
-    // 2. 각 지역별로 totalCount 조회 (병렬 처리)
+    // 2. 각 지역별로 totalCount 조회 (병렬 처리, 배치로 나누어 처리)
     const regionPromises = areas.map(async (area) => {
       try {
+        // 통계 수집은 데이터가 적으므로 타임아웃을 15초로 증가
         const { totalCount } = await getAreaBasedList({
           areaCode: area.code,
           numOfRows: 1, // 최소 데이터만 조회 (totalCount만 필요)
           pageNo: 1,
+          timeout: 15000, // 15초 타임아웃
         });
 
         return {
@@ -71,8 +89,17 @@ async function fetchRegionStatsInternal(): Promise<RegionStats[]> {
       }
     });
 
-    // 3. 모든 지역 통계 수집 (일부 실패 허용)
-    const results = await Promise.allSettled(regionPromises);
+    // 3. 배치로 나누어 순차 처리 (동시 요청 수 제한)
+    const chunks = chunkArray(regionPromises, MAX_CONCURRENT_REQUESTS);
+    const allResults: PromiseSettledResult<RegionStats | null>[] = [];
+
+    for (const chunk of chunks) {
+      const chunkResults = await Promise.allSettled(chunk);
+      allResults.push(...chunkResults);
+    }
+
+    // 4. 모든 지역 통계 수집 (일부 실패 허용)
+    const results = allResults;
     const regionStats: RegionStats[] = [];
 
     results.forEach((result, index) => {
@@ -120,10 +147,12 @@ async function fetchTypeStatsInternal(): Promise<TypeStats[]> {
     // 1. 각 타입별로 totalCount 조회 (병렬 처리)
     const typePromises = CONTENT_TYPE_IDS.map(async (contentTypeId) => {
       try {
+        // 통계 수집은 데이터가 적으므로 타임아웃을 15초로 증가
         const { totalCount } = await getAreaBasedList({
           contentTypeId,
           numOfRows: 1, // 최소 데이터만 조회 (totalCount만 필요)
           pageNo: 1,
+          timeout: 15000, // 15초 타임아웃
         });
 
         return {
@@ -143,8 +172,17 @@ async function fetchTypeStatsInternal(): Promise<TypeStats[]> {
       }
     });
 
-    // 2. 모든 타입 통계 수집 (일부 실패 허용)
-    const results = await Promise.allSettled(typePromises);
+    // 2. 배치로 나누어 순차 처리 (동시 요청 수 제한)
+    const chunks = chunkArray(typePromises, MAX_CONCURRENT_REQUESTS);
+    const allResults: PromiseSettledResult<TypeStats | null>[] = [];
+
+    for (const chunk of chunks) {
+      const chunkResults = await Promise.allSettled(chunk);
+      allResults.push(...chunkResults);
+    }
+
+    // 3. 모든 타입 통계 수집 (일부 실패 허용)
+    const results = allResults;
     const typeStats: TypeStats[] = [];
 
     results.forEach((result, index) => {

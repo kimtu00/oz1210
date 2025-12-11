@@ -366,29 +366,132 @@
     - [ ] `users` 테이블과의 관계 확인
     - [ ] 인덱스 확인 (user_id, content_id, created_at)
     - [ ] RLS 비활성화 확인 (개발 환경)
-- [ ] 북마크 목록 페이지
-  - [ ] `app/bookmarks/page.tsx` 생성
-    - [ ] 인증된 사용자만 접근 가능
-    - [ ] 로그인하지 않은 경우 로그인 유도
-  - [ ] `components/bookmarks/bookmark-list.tsx` 생성
-    - [ ] 사용자 북마크 목록 조회 (`getUserBookmarks()`)
-    - [ ] 카드 레이아웃 (홈페이지와 동일한 tour-card 사용)
-    - [ ] 빈 상태 처리 (북마크 없을 때)
-    - [ ] 로딩 상태 (Skeleton UI)
-- [ ] 북마크 관리 기능
-  - [ ] 정렬 옵션
-    - [ ] 최신순 (created_at DESC)
-    - [ ] 이름순 (가나다순)
-    - [ ] 지역별
-  - [ ] 일괄 삭제 기능
-    - [ ] 체크박스 선택
-    - [ ] 선택 항목 삭제
-    - [ ] 확인 다이얼로그
-  - [ ] 개별 삭제 기능
-    - [ ] 각 카드에 삭제 버튼
-- [ ] 페이지 통합 및 스타일링
-  - [ ] 반응형 디자인 확인
-  - [ ] 최종 페이지 확인
+  ***
+  - 추가 개발 사항
+    - [x] `scripts/verify-supabase-setup.ts` 생성 - Supabase 설정 확인 스크립트 작성
+    - [x] `package.json`에 `verify:supabase` 스크립트 추가
+    - [x] `docs/SUPABASE_VERIFICATION.md` 가이드 문서 생성
+    - [x] `scripts/verify-supabase-setup.ts` 개선 - 인덱스, 외래키, UNIQUE 제약조건 확인을 더 정확하게 구현
+      - [x] `users` 테이블 구조 확인 추가
+      - [x] UNIQUE 제약조건 실제 중복 삽입 시도로 검증
+      - [x] 외래키 확인 개선 (수동 확인 쿼리 안내 추가)
+      - [x] 인덱스 확인 개선 (수동 확인 쿼리 안내 추가)
+    - [x] `docs/SUPABASE_VERIFICATION.md` 업데이트 - Supabase 대시보드 수동 확인 방법 및 SQL 쿼리 추가
+      - [x] Table Editor 확인 방법 추가
+      - [x] SQL Editor 확인 쿼리 상세화 (테이블 구조, UNIQUE 제약조건, 외래키, 인덱스, RLS 상태)
+      - [x] 문제 해결 가이드 개선 (UNIQUE 제약조건, 외래키 추가)
+    - [x] `supabase/migrations/20251211113345_create_bookmarks_schema.sql` 생성 - db.sql 내용을 마이그레이션 파일 형식으로 변환
+- [x] 북마크 목록 페이지
+  - [x] `app/bookmarks/page.tsx` 생성
+    - [x] 인증된 사용자만 접근 가능
+    - [x] 로그인하지 않은 경우 로그인 유도
+  - [x] `components/bookmarks/bookmark-list.tsx` 생성
+    - [x] 사용자 북마크 목록 조회 (`getUserBookmarks()`)
+    - [x] 카드 레이아웃 (홈페이지와 동일한 tour-card 사용)
+    - [x] 빈 상태 처리 (북마크 없을 때)
+    - [x] 로딩 상태 (Skeleton UI)
+  ***
+  - 추가 개발 사항
+    - [x] `lib/api/supabase-api.ts`에 `getUserBookmarksWithDetails()` 함수 추가 - contentId 배열을 TourItem[]로 변환
+      - [x] `getUserBookmarks()`로 contentId 배열 조회
+      - [x] 각 contentId로 `getDetailCommon()` API 호출하여 관광지 정보 조회
+      - [x] TourDetail을 TourItem으로 변환
+      - [x] 병렬 처리로 성능 최적화 (Promise.allSettled 사용)
+      - [x] 에러 처리: 일부 관광지 정보 조회 실패 시에도 나머지 표시
+    - [x] `app/bookmarks/page.tsx` 생성 - Server Component, Clerk 인증 확인
+      - [x] Clerk `auth()` 사용하여 인증 확인
+      - [x] 로그인하지 않은 경우 `/sign-in`으로 리다이렉트
+      - [x] Suspense + Skeleton UI로 로딩 상태 처리
+      - [x] 에러 처리: try-catch로 에러 처리, 에러 메시지 표시
+      - [x] 메타데이터 설정 (title, description)
+    - [x] `components/bookmarks/bookmark-list.tsx` 생성 - TourCard 재사용, 그리드 레이아웃
+      - [x] TourCard 컴포넌트 재사용
+      - [x] 그리드 레이아웃 (반응형: 모바일 1열, 태블릿 2열, 데스크톱 3열)
+      - [x] 빈 상태 처리 (BookmarkEmpty 컴포넌트 통합)
+      - [x] 북마크 개수 표시
+      - [x] ARIA 라벨 추가 (접근성)
+    - [x] `components/bookmarks/bookmark-list-skeleton.tsx` 생성 - 로딩 스켈레톤 UI
+      - [x] TourCard와 동일한 레이아웃의 Skeleton 카드 표시
+      - [x] 6개의 스켈레톤 카드 표시
+    - [x] 성능 최적화
+      - [x] 병렬 처리: Promise.allSettled로 여러 contentId의 관광지 정보 병렬 조회
+      - [x] 에러 처리: 일부 실패해도 성공한 항목만 표시
+- [x] 북마크 관리 기능
+  - [x] 정렬 옵션
+    - [x] 최신순 (created_at DESC)
+    - [x] 이름순 (가나다순)
+    - [x] 지역별
+  - [x] 일괄 삭제 기능
+    - [x] 체크박스 선택
+    - [x] 선택 항목 삭제
+    - [x] 확인 다이얼로그
+  - [x] 개별 삭제 기능
+    - [x] 각 카드에 삭제 버튼
+  ***
+  - 추가 개발 사항
+    - [x] shadcn/ui 컴포넌트 설치 - checkbox, select
+    - [x] `actions/bookmark.ts`에 `removeBookmarksBatch()` 함수 추가 - 일괄 삭제 Server Action
+      - [x] 병렬 처리로 성능 최적화 (Promise.allSettled)
+      - [x] 성공한 개수와 실패한 개수 반환
+      - [x] 일부 실패해도 성공한 항목은 삭제
+    - [x] `actions/bookmark.ts`에 `deleteBookmark()` 함수 추가 - 개별 삭제 Server Action
+    - [x] `lib/api/supabase-api.ts`의 `getUserBookmarksWithDetails()` 업데이트 - created_at 정보 포함 (최신순 정렬용)
+      - [x] 북마크 조회 시 `created_at` 정보도 함께 조회
+      - [x] TourItem에 `bookmarkCreatedAt` 필드 추가
+    - [x] `components/bookmarks/bookmark-sort.tsx` 생성 - 정렬 옵션 컴포넌트
+      - [x] Select 드롭다운 UI
+      - [x] 정렬 옵션: 최신순, 이름순, 지역별
+      - [x] 정렬 상태 관리 (useState)
+    - [x] `components/bookmarks/bookmark-card.tsx` 생성 - 삭제 버튼이 포함된 북마크 카드
+      - [x] TourCard 래핑
+      - [x] 삭제 버튼 추가 (호버 시 표시)
+      - [x] 삭제 확인 다이얼로그
+      - [x] Optimistic update 지원
+      - [x] 삭제 성공 시 콜백 호출
+    - [x] `components/bookmarks/bookmark-bulk-actions.tsx` 생성 - 일괄 삭제 UI
+      - [x] 전체 선택/해제 체크박스
+      - [x] 선택된 항목 개수 표시
+      - [x] 일괄 삭제 버튼
+      - [x] 삭제 확인 다이얼로그
+      - [x] 선택 모드 상태 관리
+    - [x] `components/bookmarks/bookmark-list.tsx` 업데이트 - 정렬, 일괄 삭제, 개별 삭제 기능 통합
+      - [x] 정렬 옵션 컴포넌트 통합
+      - [x] 일괄 삭제 UI 통합
+      - [x] BookmarkCard 사용 (TourCard 대신)
+      - [x] 정렬된 목록 표시 (useMemo로 메모이제이션)
+      - [x] 선택 모드 상태 관리
+      - [x] 삭제 후 목록 업데이트 (router.refresh())
+      - [x] 체크박스 선택 기능 (개별 항목)
+- [x] 페이지 통합 및 스타일링
+  - [x] 반응형 디자인 확인
+  - [x] 최종 페이지 확인
+  ***
+  - 추가 개발 사항
+    - [x] `app/bookmarks/page.tsx` 개선 - 홈페이지와 일관성 확보
+      - [x] `main` 태그 추가 및 `max-w-7xl` 컨테이너 적용
+      - [x] 패딩 및 마진 홈페이지와 일관성 확보 (`py-4 sm:py-6`)
+      - [x] 에러 상태 버튼을 `Button` 컴포넌트로 변경 (접근성 개선)
+    - [x] `components/bookmarks/bookmark-list.tsx` 개선 - 반응형 및 접근성 개선
+      - [x] 빈 상태 컴포넌트 반응형 개선 (아이콘, 텍스트 크기)
+      - [x] 헤더 영역 반응형 개선 (gap, 텍스트 크기)
+      - [x] 체크박스 크기 및 포커스 스타일 개선 (`h-5 w-5`, `focus-visible:ring-2`)
+    - [x] `components/bookmarks/bookmark-sort.tsx` 개선 - 반응형 및 접근성 개선
+      - [x] Select 컴포넌트 너비 반응형 개선 (`w-[140px] sm:w-[160px]`)
+      - [x] 터치 영역 확보 (`min-h-[44px]`)
+      - [x] 아이콘 크기 반응형 개선
+    - [x] `components/bookmarks/bookmark-bulk-actions.tsx` 개선 - 반응형 및 접근성 개선
+      - [x] 레이아웃 반응형 개선 (모바일: 세로, 데스크톱: 가로)
+      - [x] 체크박스 및 라벨 터치 영역 확보 (`min-h-[44px]`)
+      - [x] 버튼 텍스트 오버플로우 방지 (`truncate`)
+      - [x] 다이얼로그 버튼 터치 영역 확보 (`min-h-[44px]`)
+    - [x] `components/bookmarks/bookmark-card.tsx` 개선 - 반응형 및 접근성 개선
+      - [x] 삭제 버튼 크기 반응형 개선 (모바일: `h-9 w-9`, 데스크톱: `h-8 w-8`)
+      - [x] 포커스 스타일 개선 (`focus-visible:ring-2`, `focus-visible:ring-primary`)
+      - [x] 키보드 네비게이션 지원 (Enter/Space 키)
+      - [x] 다이얼로그 버튼 터치 영역 확보 (`min-h-[44px]`)
+    - [x] `components/bookmarks/bookmark-list-skeleton.tsx` 개선 - 스켈레톤 UI 개선
+      - [x] 헤더 영역 스켈레톤 추가 (북마크 개수 및 정렬 옵션)
+      - [x] 실제 레이아웃과 일치하도록 개선
 
 ## Phase 6: 최적화 & 배포
 

@@ -104,13 +104,15 @@ async function fetchWithTimeout(
  * @param endpoint - API 엔드포인트 (예: '/areaCode2')
  * @param params - 쿼리 파라미터
  * @param retries - 재시도 횟수 (기본값: MAX_RETRIES)
+ * @param timeout - 타임아웃 시간 (밀리초, 기본값: TIMEOUT)
  * @returns API 응답 데이터
  * @throws {Error} API 호출 실패 시
  */
 async function fetchTourAPI<T>(
   endpoint: string,
   params: Record<string, string | number | undefined> = {},
-  retries: number = MAX_RETRIES
+  retries: number = MAX_RETRIES,
+  timeout: number = TIMEOUT
 ): Promise<T> {
   // 성능 측정 래퍼
   return measureAPICall(endpoint, async () => {
@@ -135,7 +137,7 @@ async function fetchTourAPI<T>(
 
     for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await fetchWithTimeout(url);
+      const response = await fetchWithTimeout(url, {}, timeout);
 
       if (!response.ok) {
         // HTTP 상태 코드별 에러 메시지
@@ -182,16 +184,29 @@ async function fetchTourAPI<T>(
 
       return data as unknown as T;
     } catch (error) {
-      // 타임아웃 에러 처리
-      if (error instanceof Error && error.name === "AbortError") {
-        const timeoutError = new Error("요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.");
-        timeoutError.name = "TimeoutError";
-        if (attempt === retries) {
+      // 타임아웃 에러 처리 (AbortError)
+      const isAbortError = error instanceof Error && error.name === "AbortError";
+      if (isAbortError) {
+        // 마지막 시도가 아니면 재시도
+        if (attempt < retries) {
+          const delayMs = RETRY_DELAY * Math.pow(2, attempt);
+          await delay(delayMs);
+          continue; // 재시도
+        } else {
+          // 마지막 시도에서도 실패하면 타임아웃 에러로 변환하여 throw
+          const timeoutError = new Error("요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.");
+          timeoutError.name = "TimeoutError";
+          if (process.env.NODE_ENV === "development") {
+            console.error(`[Tour API] Timeout after ${attempt + 1} attempts:`, {
+              endpoint,
+              params,
+            });
+          }
           throw timeoutError;
         }
       }
       
-      // 네트워크 에러는 재시도, 그 외는 마지막 시도에서만 throw
+      // 네트워크 에러는 재시도
       const isNetworkError = error instanceof TypeError || 
                             (error instanceof Error && error.message.includes("네트워크"));
       
@@ -255,6 +270,7 @@ export async function getAreaCode(
  * @param params.contentTypeId - 콘텐츠타입ID (선택)
  * @param params.numOfRows - 페이지당 항목 수 (기본값: 10)
  * @param params.pageNo - 페이지 번호 (기본값: 1)
+ * @param params.timeout - 타임아웃 시간 (밀리초, 선택)
  * @returns 관광지 목록 및 총 개수
  */
 export async function getAreaBasedList(params: {
@@ -262,6 +278,7 @@ export async function getAreaBasedList(params: {
   contentTypeId?: string;
   numOfRows?: number;
   pageNo?: number;
+  timeout?: number;
 }): Promise<{ items: TourItem[]; totalCount: number }> {
   const queryParams: Record<string, string | number> = {
     numOfRows: params.numOfRows || 10,
@@ -275,7 +292,7 @@ export async function getAreaBasedList(params: {
     queryParams.contentTypeId = params.contentTypeId;
   }
 
-  const data = await fetchTourAPI<TourItem>("/areaBasedList2", queryParams);
+  const data = await fetchTourAPI<TourItem>("/areaBasedList2", queryParams, MAX_RETRIES, params.timeout);
   const items = extractItems(data);
   const totalCount =
     data.response.body.totalCount ?? 0;
