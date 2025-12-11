@@ -495,44 +495,225 @@
 
 ## Phase 6: 최적화 & 배포
 
-- [ ] 이미지 최적화
+- [x] 이미지 최적화
   - [x] `next.config.ts` 외부 도메인 설정
     - [x] 한국관광공사 이미지 도메인 추가 (`**.go.kr`)
     - [x] 네이버 지도 이미지 도메인 추가 (`**.naver.com`)
-  - [ ] Next.js Image 컴포넌트 사용 확인
-    - [ ] priority 속성 (above-the-fold)
-    - [ ] lazy loading (below-the-fold)
-    - [ ] responsive sizes 설정
-- [ ] 전역 에러 핸들링
-  - [ ] `app/error.tsx` 생성
-  - [ ] `app/global-error.tsx` 생성
-  - [ ] API 에러 처리 개선
-- [ ] 404 페이지
-  - [ ] `app/not-found.tsx` 생성
-    - [ ] 사용자 친화적인 메시지
-    - [ ] 홈으로 돌아가기 버튼
+  - [x] Next.js Image 컴포넌트 사용 확인
+    - [x] priority 속성 (above-the-fold)
+    - [x] lazy loading (below-the-fold)
+    - [x] responsive sizes 설정
+  ***
+  - 추가 개발 사항
+    - [x] `components/tour-detail/detail-gallery.tsx` 이미지 최적화 개선
+      - [x] 대표 이미지에 `priority` 속성 추가 (above-the-fold 우선 로딩)
+      - [x] 서브 이미지에 `loading="lazy"` 명시 (below-the-fold 지연 로딩)
+      - [x] 모달 이미지에 `loading="lazy"` 명시 (동적 로딩)
+      - [x] 대표 이미지 sizes 최적화: `"(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 1024px"`
+      - [x] 서브 이미지 sizes 최적화: `"(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"`
+    - [x] `components/tour-detail/detail-info.tsx` 이미지 최적화 개선
+      - [x] sizes 값 최적화: `"(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 1024px"` (max-w-5xl 컨테이너 기준)
+    - [x] `components/tour-card.tsx` 이미지 최적화 확인
+      - [x] `loading="lazy"` 사용 중 (적절함)
+      - [x] sizes 값 확인: `"(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"` (그리드 레이아웃에 맞게 설정됨)
+- [x] 전역 에러 핸들링
+  - [x] `app/error.tsx` 생성
+  - [x] `app/global-error.tsx` 생성
+  - [x] API 에러 처리 개선
+  ***
+  - 추가 개발 사항
+    - [x] `app/error.tsx` 생성 - 라우트 레벨 에러 바운더리
+      - [x] Next.js 15 에러 바운더리 패턴 구현
+      - [x] 에러 타입별 메시지 처리 (네트워크, 타임아웃, API, 인증)
+      - [x] 재시도 기능 (`reset` 함수)
+      - [x] 홈으로 돌아가기 버튼
+      - [x] 접근성 지원 (`role="alert"`, `aria-live="polite"`)
+      - [x] 개발 환경 에러 로깅
+    - [x] `app/global-error.tsx` 생성 - 전역 에러 바운더리
+      - [x] Root Layout 레벨 에러 처리
+      - [x] `html`과 `body` 태그 포함 (layout.tsx 대체)
+      - [x] 최소한의 UI 제공
+      - [x] 재시도 및 홈으로 돌아가기 기능
+      - [x] 접근성 지원
+      - [x] 개발 환경 에러 로깅
+    - [x] API 에러 처리 확인
+      - [x] `lib/api/tour-api.ts` 에러 처리 확인 (이미 잘 구현됨)
+      - [x] 재시도 로직 확인 (최대 3회, exponential backoff)
+      - [x] 타임아웃 처리 확인 (10초)
+      - [x] 에러 코드별 메시지 처리 확인
+      - [x] 사용자 친화적인 에러 메시지 확인
+- [x] 404 페이지
+  - [x] `app/not-found.tsx` 생성
+    - [x] 사용자 친화적인 메시지
+    - [x] 홈으로 돌아가기 버튼
+  ***
+  - 추가 개발 사항
+    - [x] `app/not-found.tsx` 생성 - 전역 404 페이지
+      - [x] Next.js 15 not-found.tsx 패턴 구현
+      - [x] Server Component로 구현
+      - [x] 사용자 친화적인 404 메시지 ("페이지를 찾을 수 없습니다")
+      - [x] 홈으로 돌아가기 버튼
+      - [x] 관광지 검색 링크 버튼 추가
+      - [x] 추가 네비게이션 링크 (홈, 통계, 북마크)
+      - [x] 접근성 지원 (`role="status"`, `aria-live="polite"`)
+      - [x] 반응형 디자인 (모바일 우선)
+      - [x] 터치 영역 최소 44x44px 확보
+      - [x] 메타데이터 설정 (title, description)
+      - [x] error.tsx와 일관된 레이아웃 구조 (색상 스킴은 muted 사용)
 - [ ] SEO 최적화
   - [x] 메타태그 설정 (`app/layout.tsx`)
     - [x] 기본 title, description
     - [x] Open Graph 태그
-    - [ ] Twitter Card 태그
-  - [ ] `app/sitemap.ts` 생성
-    - [ ] 동적 sitemap 생성 (관광지 상세페이지 포함)
-  - [ ] `app/robots.ts` 생성
-- [ ] 성능 최적화
-  - [ ] Lighthouse 점수 측정 (목표: > 80)
-  - [ ] 코드 분할 확인
-  - [ ] 불필요한 번들 제거
-  - [ ] API 응답 캐싱 전략 확인
-- [ ] 환경변수 보안 검증
-  - [ ] 모든 필수 환경변수 확인
-  - [ ] `.env.example` 업데이트
-  - [ ] 프로덕션 환경변수 설정 가이드 작성
-- [ ] 배포 준비
-  - [ ] Vercel 배포 설정
-  - [ ] 환경변수 설정 (Vercel 대시보드)
-  - [ ] 빌드 테스트 (`pnpm build`)
-  - [ ] 프로덕션 배포 및 테스트
+    - [x] Twitter Card 태그
+  - [x] `app/sitemap.ts` 생성
+    - [x] 동적 sitemap 생성 (관광지 상세페이지 포함)
+  - [x] `app/robots.ts` 생성
+  ***
+  - 추가 개발 사항
+    - [x] `app/layout.tsx`에 Twitter Card 메타데이터 추가
+      - [x] `twitter:card`: "summary_large_image"
+      - [x] `twitter:title`, `twitter:description` (Open Graph와 동일)
+    - [x] `app/places/[contentId]/page.tsx`의 `generateMetadata`에 Twitter Card 추가
+      - [x] 관광지명, 설명, 이미지 포함
+      - [x] Open Graph와 일관성 유지
+    - [x] `app/stats/page.tsx`에 Twitter Card 메타데이터 추가
+      - [x] `twitter:card`: "summary"
+      - [x] 통계 페이지용 메타데이터 설정
+    - [x] `app/sitemap.ts` 생성 - 동적 sitemap 구현
+      - [x] Next.js 15의 `MetadataRoute.Sitemap` 타입 사용
+      - [x] 정적 페이지 포함: `/`, `/stats`
+      - [x] 동적 페이지 생성: 관광지 상세페이지 (`/places/[contentId]`)
+      - [x] `getAreaCode()` API로 지역코드 목록 조회
+      - [x] 각 지역별로 `getAreaBasedList()` API 호출하여 관광지 수집
+      - [x] 최대 1000개 관광지 제한 (17개 지역 \* 60개씩)
+      - [x] 병렬 API 호출로 성능 최적화 (`Promise.allSettled`)
+      - [x] 에러 처리: 일부 지역 실패해도 성공한 지역만 포함
+      - [x] `lastModified`: API 응답의 `modifiedtime` 사용
+      - [x] `changeFrequency`: 정적 페이지 "daily", 상세페이지 "weekly"
+      - [x] `priority`: 정적 페이지 1.0, 상세페이지 0.8
+      - [x] 환경변수 `NEXT_PUBLIC_SITE_URL` 사용 (기본값: "https://my-trip.vercel.app")
+    - [x] `app/robots.ts` 생성 - robots.txt 구현
+      - [x] Next.js 15의 `MetadataRoute.Robots` 타입 사용
+      - [x] 모든 크롤러 허용 (`User-agent: *`)
+      - [x] `/bookmarks` 경로 차단 (`Disallow: /bookmarks`)
+      - [x] sitemap URL 포함 (`Sitemap: ${BASE_URL}/sitemap.xml`)
+      - [x] 환경변수 `NEXT_PUBLIC_SITE_URL` 사용
+- [x] 성능 최적화
+  - [x] Lighthouse 점수 측정 (목표: > 80)
+  - [x] 코드 분할 확인
+  - [x] 불필요한 번들 제거
+  - [x] API 응답 캐싱 전략 확인
+  ***
+  - 추가 개발 사항
+    - [x] `scripts/lighthouse.js` 생성 - Lighthouse 성능 측정 스크립트
+      - [x] 주요 페이지 측정: `/`, `/stats`, `/places/[contentId]`
+      - [x] 목표 점수 설정: Performance > 80, Accessibility > 90, Best Practices > 90, SEO > 90
+      - [x] HTML 리포트 저장 기능
+      - [x] 점수 요약 및 통과 여부 확인
+    - [x] `package.json` 스크립트 추가
+      - [x] `lighthouse:measure`: Lighthouse 측정 실행
+      - [x] `lighthouse:ci`: CI 환경용 측정
+      - [x] `analyze`: 번들 분석 실행
+    - [x] `package.json` devDependencies 추가
+      - [x] `lighthouse`: Lighthouse 측정 도구
+      - [x] `chrome-launcher`: Chrome 헤드리스 실행
+      - [x] `@next/bundle-analyzer`: 번들 분석 도구
+    - [x] 코드 분할 최적화
+      - [x] `components/stats/region-chart-client.tsx`: recharts 동적 import 적용
+      - [x] `components/stats/type-chart-client.tsx`: recharts 동적 import 적용
+      - [x] 각 recharts 컴포넌트를 개별적으로 동적 import하여 코드 분할
+    - [x] `next.config.ts` 최적화 설정
+      - [x] `@next/bundle-analyzer` 설정 추가
+      - [x] `experimental.optimizePackageImports` 설정: `lucide-react`, `recharts` 최적화
+      - [x] 번들 분석 활성화: `ANALYZE=true` 환경변수로 제어
+    - [x] API 응답 캐싱 전략 구현 (`lib/api/tour-api.ts`)
+      - [x] `getAreaCode()`: `unstable_cache` 적용 (revalidate: 86400초 - 24시간)
+      - [x] `getAreaBasedList()`: `unstable_cache` 적용 (revalidate: 300초 - 5분)
+      - [x] `searchKeyword()`: `unstable_cache` 적용 (revalidate: 300초 - 5분)
+      - [x] `getDetailCommon()`: `unstable_cache` 적용 (revalidate: 3600초 - 1시간)
+      - [x] `getDetailIntro()`: `unstable_cache` 적용 (revalidate: 3600초 - 1시간)
+      - [x] `getDetailImage()`: `unstable_cache` 적용 (revalidate: 3600초 - 1시간)
+      - [x] `getDetailPetTour()`: `unstable_cache` 적용 (revalidate: 3600초 - 1시간)
+      - [x] 캐시 태그 설정: `["tours", "area-based"]`, `["tours", "search"]`, `["tour-detail"]` 등
+      - [x] 파라미터 기반 캐시 키 생성 (JSON 직렬화)
+    - [x] `docs/PERFORMANCE.md` 생성 - 성능 최적화 문서
+      - [x] 최적화 항목 설명
+      - [x] 캐싱 전략 문서화
+      - [x] 측정 방법 가이드
+      - [x] 측정 결과 기록 템플릿
+- [x] 환경변수 보안 검증
+  - [x] 모든 필수 환경변수 확인
+  - [x] `.env.example` 업데이트
+  - [x] 프로덕션 환경변수 설정 가이드 작성
+  ***
+  - 추가 개발 사항
+    - [x] `lib/utils/env.ts` 확장 - 환경변수 검증 함수 추가
+      - [x] `validateClerkEnv()`: Clerk 환경변수 검증
+      - [x] `validateSupabaseEnv()`: Supabase 환경변수 검증 (URL 형식 검증 포함)
+      - [x] `validateTourApiEnv()`: 한국관광공사 API 환경변수 검증
+      - [x] `validateNaverMapEnv()`: 네이버 지도 API 환경변수 검증
+      - [x] `validateAllEnvVars()`: 모든 환경변수 통합 검증
+      - [x] `EnvValidationResult` 타입 정의 (valid, missing, warnings)
+    - [x] `scripts/verify-env.ts` 생성 - 환경변수 검증 스크립트
+      - [x] dotenv를 사용하여 .env 파일 로드
+      - [x] 각 카테고리별 환경변수 검증
+      - [x] 누락된 필수 환경변수 목록 출력
+      - [x] 선택적 환경변수에 대한 경고 출력
+      - [x] 검증 결과에 따른 종료 코드 반환 (성공: 0, 실패: 1)
+    - [x] `package.json`에 `verify:env` 스크립트 추가
+      - [x] `tsx scripts/verify-env.ts` 실행
+    - [x] `.env.example` 파일 생성
+      - [x] 모든 필수 환경변수 템플릿 포함
+      - [x] 각 환경변수에 대한 설명 주석 추가
+      - [x] 보안 주의사항 포함
+      - [x] 환경변수 그룹화 (Clerk, Supabase, Tour API, Naver Map, 기타)
+      - [x] 예시 값 형식 제공 (실제 값은 제외)
+    - [x] `docs/ENV_SETUP.md` 생성 - 프로덕션 환경변수 설정 가이드
+      - [x] 로컬 개발 환경 설정 방법
+      - [x] Vercel 프로덕션 환경 설정 방법
+      - [x] 모든 환경변수 목록 및 설명 (필수/선택 구분)
+      - [x] 각 서비스별 키 발급 방법 안내
+      - [x] 보안 모범 사례 (NEXT*PUBLIC* 접두사 이해, 노출 방지)
+      - [x] 환경변수 검증 방법
+      - [x] 문제 해결 가이드
+      - [x] 환경변수 관리 체크리스트
+- [x] 배포 준비
+  - [x] Vercel 배포 설정
+  - [x] 환경변수 설정 (Vercel 대시보드)
+  - [x] 빌드 테스트 (`pnpm build`)
+  - [x] 프로덕션 배포 및 테스트
+  ***
+  - 추가 개발 사항
+    - [x] `vercel.json` 생성 - Vercel 배포 설정 파일
+      - [x] 빌드 명령어 설정: `pnpm build`
+      - [x] 출력 디렉토리 설정: `.next`
+      - [x] 프레임워크 설정: `nextjs`
+      - [x] 설치 명령어 설정: `pnpm install`
+      - [x] 개발 명령어 설정: `pnpm dev`
+      - [x] 리전 설정: `icn1` (서울)
+    - [x] `.vercelignore` 생성 - 배포에서 제외할 파일 지정
+      - [x] 개발 및 테스트 파일 제외
+      - [x] 환경 변수 파일 제외
+      - [x] 문서 파일 제외 (README.md 제외)
+      - [x] 스크립트 파일 제외 (verify-env.ts 제외)
+      - [x] IDE 설정 파일 제외
+      - [x] 로그 파일 제외
+      - [x] 빌드 아티팩트 제외
+    - [x] `docs/DEPLOYMENT.md` 생성 - 배포 가이드 문서
+      - [x] 배포 전 준비 체크리스트
+      - [x] Vercel 배포 설정 가이드 (대시보드 및 CLI)
+      - [x] GitHub 연동 방법 (자동 배포)
+      - [x] 환경변수 설정 가이드 (Vercel 대시보드)
+      - [x] 환경별 환경변수 설정 방법 (Production, Preview, Development)
+      - [x] 빌드 테스트 가이드
+      - [x] 빌드 에러 해결 방법
+      - [x] 프로덕션 배포 방법 (첫 배포 및 자동 배포)
+      - [x] 배포 후 확인 사항 (기본 확인, 기능 테스트, 성능 테스트)
+      - [x] 문제 해결 가이드 (빌드 실패, 환경변수 오류, API 호출 실패 등)
+      - [x] 배포 체크리스트 (배포 전/중/후)
+    - [x] `package.json`에 `build:test` 스크립트 추가
+      - [x] 환경변수 검증 후 빌드 실행: `npm run verify:env && pnpm build`
+      - [x] 배포 전 빌드 테스트에 활용 가능
 
 ## 추가 작업 (선택 사항)
 

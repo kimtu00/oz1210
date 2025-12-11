@@ -140,7 +140,8 @@ export function DetailGallery({ images }: DetailGalleryProps) {
             alt={`${mainImage.contentid} 이미지 1`}
             fill
             className="cursor-pointer object-cover transition-transform hover:scale-105"
-            sizes="(max-width: 768px) 100vw, 80vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 1024px"
+            priority
             onClick={() => openModal(0)}
             unoptimized
           />
@@ -159,7 +160,8 @@ export function DetailGallery({ images }: DetailGalleryProps) {
                   alt={`${image.contentid} 이미지 ${index + 2}`}
                   fill
                   className="cursor-pointer object-cover transition-transform hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, 20vw"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                  loading="lazy"
                   onClick={() => openModal(index + 1)}
                   unoptimized
                 />
@@ -234,6 +236,7 @@ export function DetailGallery({ images }: DetailGalleryProps) {
                 fill
                 className="object-contain"
                 sizes="100vw"
+                loading="lazy"
                 unoptimized
               />
             </div>

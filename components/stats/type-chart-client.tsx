@@ -8,13 +8,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { PieChart, Pie, Cell } from "recharts";
+import dynamic from "next/dynamic";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { TypeStats } from "@/lib/types/stats";
+
+// recharts 동적 import로 코드 분할 최적화
+const PieChart = dynamic(
+  () => import("recharts").then((mod) => mod.PieChart),
+  { ssr: false }
+);
+const Pie = dynamic(
+  () => import("recharts").then((mod) => mod.Pie),
+  { ssr: false }
+);
+const Cell = dynamic(
+  () => import("recharts").then((mod) => mod.Cell),
+  { ssr: false }
+);
 
 /**
  * 차트 데이터 형식

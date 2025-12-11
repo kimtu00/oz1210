@@ -46,21 +46,28 @@ async function generateMetadata({
   try {
     const detail = await getDetailCommon(contentId);
     
+    const description = detail.overview 
+      ? detail.overview.substring(0, 100) 
+      : `${detail.title} 관광지 정보`;
+    const imageUrl = detail.firstimage;
+
     return {
       title: `${detail.title} - My Trip`,
-      description: detail.overview 
-        ? detail.overview.substring(0, 100) 
-        : `${detail.title} 관광지 정보`,
+      description,
       openGraph: {
         title: detail.title,
-        description: detail.overview 
-          ? detail.overview.substring(0, 100) 
-          : `${detail.title} 관광지 정보`,
-        images: detail.firstimage 
-          ? [{ url: detail.firstimage, width: 1200, height: 630 }]
+        description,
+        images: imageUrl 
+          ? [{ url: imageUrl, width: 1200, height: 630 }]
           : [],
         url: `https://my-trip.vercel.app/places/${contentId}`,
         type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: detail.title,
+        description,
+        images: imageUrl ? [imageUrl] : [],
       },
     };
   } catch (error) {

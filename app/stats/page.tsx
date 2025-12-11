@@ -37,6 +37,11 @@ export const metadata: Metadata = {
     description: "전국 관광지 통계를 한눈에 확인하세요",
     type: "website",
   },
+  twitter: {
+    card: "summary",
+    title: "통계 대시보드 - My Trip",
+    description: "전국 관광지 통계를 한눈에 확인하세요",
+  },
 };
 
 /**

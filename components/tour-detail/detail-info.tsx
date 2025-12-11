@@ -90,7 +90,7 @@ export function DetailInfo({ detail }: DetailInfoProps) {
             alt={detail.title}
             fill
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, 80vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 1024px"
             priority
             unoptimized
           />

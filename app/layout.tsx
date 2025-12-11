@@ -39,6 +39,11 @@ export const metadata: Metadata = {
     description: "전국 관광지 정보를 검색하고 지도에서 확인하세요",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "My Trip - 한국 관광지 정보 서비스",
+    description: "전국 관광지 정보를 검색하고 지도에서 확인하세요",
+  },
 };
 
 /**

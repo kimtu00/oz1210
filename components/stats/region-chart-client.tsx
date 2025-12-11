@@ -8,13 +8,35 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BarChart, Bar, XAxis, YAxis, Cell } from "recharts";
+import dynamic from "next/dynamic";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { RegionStats } from "@/lib/types/stats";
+
+// recharts 동적 import로 코드 분할 최적화
+const BarChart = dynamic(
+  () => import("recharts").then((mod) => mod.BarChart),
+  { ssr: false }
+);
+const Bar = dynamic(
+  () => import("recharts").then((mod) => mod.Bar),
+  { ssr: false }
+);
+const XAxis = dynamic(
+  () => import("recharts").then((mod) => mod.XAxis),
+  { ssr: false }
+);
+const YAxis = dynamic(
+  () => import("recharts").then((mod) => mod.YAxis),
+  { ssr: false }
+);
+const Cell = dynamic(
+  () => import("recharts").then((mod) => mod.Cell),
+  { ssr: false }
+);
 
 /**
  * 차트 데이터 형식

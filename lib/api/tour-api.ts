@@ -8,6 +8,7 @@
  * @see https://www.data.go.kr/data/15101578/openapi.do
  */
 
+import { unstable_cache } from "next/cache";
 import { getTourApiKey } from "@/lib/utils/env";
 import { measureAPICall } from "@/lib/utils/api-metrics";
 import {
@@ -245,12 +246,12 @@ function extractItems<T>(data: APIResponse<T>): T[] {
 }
 
 /**
- * 지역코드 조회
+ * 지역코드 조회 (내부 함수)
  *
  * @param areaCode - 시/도 코드 (없으면 전체 조회)
  * @returns 지역코드 목록
  */
-export async function getAreaCode(
+async function getAreaCodeInternal(
   areaCode?: string
 ): Promise<AreaCode[]> {
   const params: Record<string, string | undefined> = {};
@@ -263,7 +264,24 @@ export async function getAreaCode(
 }
 
 /**
- * 지역 기반 관광지 목록 조회
+ * 지역코드 조회 (캐싱 적용)
+ *
+ * 24시간 동안 캐싱됩니다. 지역코드는 자주 변경되지 않으므로 긴 캐시 시간을 사용합니다.
+ *
+ * @param areaCode - 시/도 코드 (없으면 전체 조회)
+ * @returns 지역코드 목록
+ */
+export const getAreaCode = unstable_cache(
+  getAreaCodeInternal,
+  ["area-code"],
+  {
+    revalidate: 86400, // 24시간
+    tags: ["area-code"],
+  }
+);
+
+/**
+ * 지역 기반 관광지 목록 조회 (내부 함수)
  *
  * @param params - 조회 파라미터
  * @param params.areaCode - 지역코드 (선택)
@@ -273,7 +291,7 @@ export async function getAreaCode(
  * @param params.timeout - 타임아웃 시간 (밀리초, 선택)
  * @returns 관광지 목록 및 총 개수
  */
-export async function getAreaBasedList(params: {
+async function getAreaBasedListInternal(params: {
   areaCode?: string;
   contentTypeId?: string;
   numOfRows?: number;
@@ -311,7 +329,35 @@ export async function getAreaBasedList(params: {
 }
 
 /**
- * 키워드 검색
+ * 지역 기반 관광지 목록 조회 (캐싱 적용)
+ *
+ * 5분 동안 캐싱됩니다. 목록 데이터는 자주 변경되므로 짧은 캐시 시간을 사용합니다.
+ *
+ * @param params - 조회 파라미터
+ * @returns 관광지 목록 및 총 개수
+ */
+export async function getAreaBasedList(params: {
+  areaCode?: string;
+  contentTypeId?: string;
+  numOfRows?: number;
+  pageNo?: number;
+  timeout?: number;
+}): Promise<{ items: TourItem[]; totalCount: number }> {
+  // 캐시 키 생성 (파라미터 직렬화)
+  const cacheKey = `area-based-list-${JSON.stringify(params)}`;
+  
+  return unstable_cache(
+    () => getAreaBasedListInternal(params),
+    [cacheKey],
+    {
+      revalidate: 300, // 5분
+      tags: ["tours", "area-based"],
+    }
+  )();
+}
+
+/**
+ * 키워드 검색 (내부 함수)
  *
  * @param params - 검색 파라미터
  * @param params.keyword - 검색 키워드 (필수)
@@ -321,7 +367,7 @@ export async function getAreaBasedList(params: {
  * @param params.pageNo - 페이지 번호 (기본값: 1)
  * @returns 검색 결과 목록 및 총 개수
  */
-export async function searchKeyword(params: {
+async function searchKeywordInternal(params: {
   keyword: string;
   areaCode?: string;
   contentTypeId?: string;
@@ -363,12 +409,44 @@ export async function searchKeyword(params: {
 }
 
 /**
- * 관광지 공통 정보 조회
+ * 키워드 검색 (캐싱 적용)
+ *
+ * 5분 동안 캐싱됩니다. 검색 결과는 자주 변경되므로 짧은 캐시 시간을 사용합니다.
+ *
+ * @param params - 검색 파라미터
+ * @returns 검색 결과 목록 및 총 개수
+ */
+export async function searchKeyword(params: {
+  keyword: string;
+  areaCode?: string;
+  contentTypeId?: string;
+  numOfRows?: number;
+  pageNo?: number;
+}): Promise<{ items: TourItem[]; totalCount: number }> {
+  if (!params.keyword || params.keyword.trim() === "") {
+    throw new Error("Keyword is required");
+  }
+
+  // 캐시 키 생성 (파라미터 직렬화)
+  const cacheKey = `search-keyword-${JSON.stringify(params)}`;
+  
+  return unstable_cache(
+    () => searchKeywordInternal(params),
+    [cacheKey],
+    {
+      revalidate: 300, // 5분
+      tags: ["tours", "search"],
+    }
+  )();
+}
+
+/**
+ * 관광지 공통 정보 조회 (내부 함수)
  *
  * @param contentId - 콘텐츠ID (필수)
  * @returns 관광지 상세 정보
  */
-export async function getDetailCommon(
+async function getDetailCommonInternal(
   contentId: string
 ): Promise<TourDetail> {
   if (!contentId) {
@@ -398,13 +476,30 @@ export async function getDetailCommon(
 }
 
 /**
- * 관광지 소개 정보 조회
+ * 관광지 공통 정보 조회 (캐싱 적용)
+ *
+ * 1시간 동안 캐싱됩니다. 상세 정보는 자주 변경되지 않으므로 긴 캐시 시간을 사용합니다.
+ *
+ * @param contentId - 콘텐츠ID (필수)
+ * @returns 관광지 상세 정보
+ */
+export const getDetailCommon = unstable_cache(
+  getDetailCommonInternal,
+  ["tour-detail"],
+  {
+    revalidate: 3600, // 1시간
+    tags: ["tour-detail"],
+  }
+);
+
+/**
+ * 관광지 소개 정보 조회 (내부 함수)
  *
  * @param contentId - 콘텐츠ID (필수)
  * @param contentTypeId - 콘텐츠타입ID (필수)
  * @returns 관광지 운영 정보
  */
-export async function getDetailIntro(
+async function getDetailIntroInternal(
   contentId: string,
   contentTypeId: string
 ): Promise<TourIntro> {
@@ -431,7 +526,33 @@ export async function getDetailIntro(
 }
 
 /**
- * 관광지 이미지 목록 조회
+ * 관광지 소개 정보 조회 (캐싱 적용)
+ *
+ * 1시간 동안 캐싱됩니다. 운영 정보는 자주 변경되지 않으므로 긴 캐시 시간을 사용합니다.
+ *
+ * @param contentId - 콘텐츠ID (필수)
+ * @param contentTypeId - 콘텐츠타입ID (필수)
+ * @returns 관광지 운영 정보
+ */
+export async function getDetailIntro(
+  contentId: string,
+  contentTypeId: string
+): Promise<TourIntro> {
+  // 캐시 키 생성
+  const cacheKey = `tour-intro-${contentId}-${contentTypeId}`;
+  
+  return unstable_cache(
+    () => getDetailIntroInternal(contentId, contentTypeId),
+    [cacheKey],
+    {
+      revalidate: 3600, // 1시간
+      tags: ["tour-detail", `tour-intro-${contentId}`],
+    }
+  )();
+}
+
+/**
+ * 관광지 이미지 목록 조회 (내부 함수)
  *
  * @param params - 조회 파라미터
  * @param params.contentId - 콘텐츠ID (필수)
@@ -439,7 +560,7 @@ export async function getDetailIntro(
  * @param params.pageNo - 페이지 번호 (기본값: 1)
  * @returns 이미지 목록
  */
-export async function getDetailImage(params: {
+async function getDetailImageInternal(params: {
   contentId: string;
   numOfRows?: number;
   pageNo?: number;
@@ -459,12 +580,38 @@ export async function getDetailImage(params: {
 }
 
 /**
- * 반려동물 동반 여행 정보 조회
+ * 관광지 이미지 목록 조회 (캐싱 적용)
+ *
+ * 1시간 동안 캐싱됩니다. 이미지 목록은 자주 변경되지 않으므로 긴 캐시 시간을 사용합니다.
+ *
+ * @param params - 조회 파라미터
+ * @returns 이미지 목록
+ */
+export async function getDetailImage(params: {
+  contentId: string;
+  numOfRows?: number;
+  pageNo?: number;
+}): Promise<TourImage[]> {
+  // 캐시 키 생성
+  const cacheKey = `tour-image-${JSON.stringify(params)}`;
+  
+  return unstable_cache(
+    () => getDetailImageInternal(params),
+    [cacheKey],
+    {
+      revalidate: 3600, // 1시간
+      tags: ["tour-detail", `tour-image-${params.contentId}`],
+    }
+  )();
+}
+
+/**
+ * 반려동물 동반 여행 정보 조회 (내부 함수)
  *
  * @param contentId - 콘텐츠ID (필수)
  * @returns 반려동물 정보 (없으면 null)
  */
-export async function getDetailPetTour(
+async function getDetailPetTourInternal(
   contentId: string
 ): Promise<PetTourInfo | null> {
   if (!contentId) {
@@ -493,4 +640,21 @@ export async function getDetailPetTour(
     return null;
   }
 }
+
+/**
+ * 반려동물 동반 여행 정보 조회 (캐싱 적용)
+ *
+ * 1시간 동안 캐싱됩니다. 반려동물 정보는 자주 변경되지 않으므로 긴 캐시 시간을 사용합니다.
+ *
+ * @param contentId - 콘텐츠ID (필수)
+ * @returns 반려동물 정보 (없으면 null)
+ */
+export const getDetailPetTour = unstable_cache(
+  getDetailPetTourInternal,
+  ["tour-pet"],
+  {
+    revalidate: 3600, // 1시간
+    tags: ["tour-detail", "tour-pet"],
+  }
+);
 
